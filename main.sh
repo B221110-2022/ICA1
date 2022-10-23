@@ -81,33 +81,49 @@
 #done
 
 
-########### Code block 5 : Mean for groups ########
+###################### Code block 5 : Mean for groups ###################################
 #mkdir groups
 #rm -f groups/*.tmp
+######### 5.1 some preparation: generate group files and get group info and others.
+## print the group info file excluding the head line, and sort. k2:type,k4:time,k5:treatment,k3:replicate. Sorted file will be at the order of groups with replicate from 1 to n
 #tail -n +2 fastq/Tco.fqfiles | sort -k2,2 -k4,4 -k5,5 -k3,3 | while read sname stype rep time treat end1 end2;do
-#if [ ${rep} == 1 ];then
-#filename=${stype}_${time}h_${treat}
-#touch groups/${filename}_file.tmp
-#fi
-#echo "${end1:0:8}" >> groups/${filename}_file.tmp
+#  # encounter replicate 1, means this is a line starting a new group against to lines above. 
+#  if [ ${rep} == 1 ];then
+#    # paste a filename according to this group parameter and then create a file for the group.
+#    filename=${stype}_${time}h_${treat}  # e.g WT_24h_Uninduced
+#    touch groups/${filename}_file.tmp # e.g. WT_24h_Uninduced_file.tmp
+#  fi
+#  # get and slice the seq filename of this line. all the filenames from the same group will end up in the same group file.
+#  # e.g. WT_24h_Uninduced_file.tmp contains 3 lines: Tco-6890 Tco-6600 Tco-6037
+#  echo "${end1:0:8}" >> groups/${filename}_file.tmp
 #done
+## get the gene position, uid, description column from bed file, for whenever need to paste into other files later.
 #cut -f1,4 TriTrypDB-46_TcongolenseIL3000_2019.bed > gene.tmp
 #cut -f5 TriTrypDB-46_TcongolenseIL3000_2019.bed > description.tmp
 #
+######### 5.2 calculate the mean count/exp level.
 #replicate=0
 #rm -f groups/rep*
-#ls groups | grep file.tmp | while read groupfile;do  # groupfile:Clone1_0h_Uninduced_file.tmp 
-#cat groups/${groupfile} | while read seq_num;do  # seq_num: Tco-5053
-#((replicate+=1))
-#cut -f6 counts/${seq_num}cov.out > groups/rep${replicate}.tmp
+## read the group file containing which Tco- are in that group, in loop.
+#ls groups | grep file.tmp | while read groupfile;do  # e.g. WT_24h_Uninduced_file.tmp 
+#  # for a specific group, read the seq filename in that group in loop
+#  cat groups/${groupfile} | while read seq_num;do  # e.g.: Tco-5053
+#    ((replicate+=1))
+#    # each file(replication) will have a unique filename for its count data, by adding a variable "replicate"
+#    # count data are in 6th colunm of the outputfile.
+#    cut -f6 counts/${seq_num}cov.out > groups/rep${replicate}.tmp
+#  done
+#  # for a specific group, paste the count data column by column, calculate the mean.
+#  paste groups/rep* | awk 'BEGIN{sum=0}{for(i=1;i<=NF;i++){sum+=$i}{print sum/NF; sum=0}}' > groups/${groupfile%file*}mean.tmp # outputfile e.g.: WT_24h_Uninduced_mean.tmp
+#  # add the gene and description columns to the final txt file. 
+#  paste gene.tmp groups/${groupfile%file*}mean.tmp description.tmp > groups/${groupfile%file*}mean.txt
+#  rm -f groups/rep*
 #done
-#paste groups/rep* | awk 'BEGIN{sum=0}{for(i=1;i<=NF;i++){sum+=$i}{print sum/NF; sum=0}}' > groups/${groupfile%file*}mean.tmp
-#paste gene.tmp groups/${groupfile%file*}mean.tmp description.tmp > groups/${groupfile%file*}mean.txt
-#rm -f groups/rep*
-#done
+## add a heading line to all the final txt file
 #sed -i '1i Position\tGene\tMean_exp\tDescription'  groups/*mean.txt
 #rm -f groups/*file.tmp
-#
+
+
 ########### Code block 6 : Fold change comparisons ########
 ### 6.1 Specific time point. Ref: WT uninduced
 #mkdir fixed_time
