@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-Threads=50  # for running bowtie2
+Threads=50
 Read_pairs_num=100000  # the number of read-pairs for each sample
 
 echo "copying the raw experimental RNAseq folder to the current directory..."
@@ -32,7 +32,7 @@ fi
 ##################### Code block 2 : Quality check ###############################
 ##################################################################################
 mkdir report # fastqc does not create the folder automatically
-fastqc fastq/*fq.gz -t 6 -o report --extract  # perform fastqc and output to report folder, unzipping all the files.
+fastqc fastq/*fq.gz -t ${Threads} -o report --extract  # perform fastqc and output to report folder, unzipping all the files.
 rm -f summary_per_item.tmp summary_per_file.tmp
 # get the quality summary for all the seqs once a time horizontally, read the items the fastqc has checked(e.g.Per base sequence content) in loop
 cat report/*fastqc/summary.txt | cut -f2 | sort | uniq | while read item;do
