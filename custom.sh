@@ -53,7 +53,7 @@ unset Com
 # read the chosen groups
 while read num group;do
   ((count+=1))
-  Filename="${Filename}${num}"
+  Filename="${Filename}_${num}"
   # store each chosen group to an array "Com", staring from index 1.
   Com[${count}]=${group}
 done < choice.tmp
@@ -80,5 +80,6 @@ sindex=$((${Sortby}+3))
 # paste the description column, and sort by the chosen column(a comparison group).
 paste user_custom/${Filename} user_custom/description.tmp | sort -k${sindex},${sindex}r > tmp && mv tmp user_custom/${Filename}
 sed -i '1i '${heading}'\tDescription'  user_custom/${Filename}  # add a heading
+echo "Complete. The result was generated in /${Filename}"
 
 rm -f user_custom/*.tmp *.tmp
