@@ -1,11 +1,14 @@
 #!/usr/bin/bash
 
+Threads=50
 Read_pairs_num=100000  # the number of read-pairs for each sample
 
 echo "copying the raw experimental RNAseq folder to the current directory..."
 cp -r /localdisk/data/BPSM/ICA1/fastq . 
 
-###################### Code block 1 : Integrity check ###################################
+##################################################################################
+###################### Code block 1 : Integrity check ############################
+##################################################################################
 echo "Quick check for integrity is processing..."
 rm -f integrity_check.txt  # in case the output file was already there
 touch integrity_check.txt
@@ -25,7 +28,9 @@ else
   echo "quick check complete, ${defeat} RNAseq files are not intact." >> integrity_check.txt
 fi
 
-##################### Code block 2 : Quality check ###################################
+##################################################################################
+##################### Code block 2 : Quality check ###############################
+##################################################################################
 mkdir report # fastqc does not create the folder automatically
 fastqc fastq/*fq.gz -o report --extract  # perform fastqc and output to report folder, unzipping all the files.
 rm -f summary_per_item.tmp summary_per_file.tmp
@@ -53,8 +58,9 @@ sort -t$'\t' -k2,2r -k3,3r summary_per_file.tmp >> summary_per_file.txt
 
 rm -f summary_per_item.tmp summary_per_file.tmp
 
-
+##################################################################################
 ##################### Code block 3 : Alignment ###################################
+##################################################################################
 cp -r /localdisk/data/BPSM/ICA1/Tcongo_genome/ .  # copy the whole genome of Trypanosoma congolense
 # build the index for the genome, output the index files with a prefix of "tc"
 bowtie2-build Tcongo_genome/TriTrypDB-46_TcongolenseIL3000_2019_Genome.fasta.gz  Tcongo_genome/tc
@@ -65,13 +71,14 @@ ls fastq | grep 2.fq.gz > fq2.tmp
 # paste them so that bowtie2 can recursively align each paired-end data with whole genome.
 paste fq1.tmp fq2.tmp | while read fq1 fq2;do
   # Using 50 threads. the result sam files are then transformed to bam files with -b,(-S:improve compatibility). Bam files are sorted so as to improve the speed for following steps.  
-  bowtie2 -p 50 -x Tcongo_genome/tc -1 fastq/${fq1} -2 fastq/${fq2} | samtools view -bS | samtools sort > Align_bam/${fq1:0:8}.bam
+  bowtie2 -p ${Threads} -x Tcongo_genome/tc -1 fastq/${fq1} -2 fastq/${fq2} | samtools view -bS | samtools sort > Align_bam/${fq1:0:8}.bam
   # output files are stored with the name of e.g. Tco-5053.bam
 done
 rm -f fq1.tmp fq2.tmp
 
-
-###################### Code block 4 : Counts data ###################################
+##################################################################################
+###################### Code block 4 : Counts data ################################
+##################################################################################
 cp /localdisk/data/BPSM/ICA1/TriTrypDB-46_TcongolenseIL3000_2019.bed . # get the gene information file
 mkdir counts
 ls Align_bam | while read bamfile;do
@@ -80,8 +87,9 @@ ls Align_bam | while read bamfile;do
   # output files are stored with the name of e.g. Tco-5053cov.out
 done
 
-
-###################### Code block 5 : Mean for groups ###################################
+##################################################################################
+###################### Code block 5 : Mean for groups ############################
+##################################################################################
 mkdir groups
 rm -f groups/*.tmp
 ######## 5.1 some preparation: generate group files and get group info and others.
@@ -123,8 +131,9 @@ done
 sed -i '1i Position\tGene\tMean_exp\tDescription'  groups/*mean.txt
 rm -f groups/*file.tmp
 
-
-###################### Code block 6 : Fold change comparisons ###################################
+##################################################################################
+###################### Code block 6 : Fold change comparisons ####################
+##################################################################################
 ######### 6.1 Specific time points. WT Uninduced group is set as reference
 mkdir fixed_time
 # This is to get all the time point the experiments have done, from the info file Tco.fqfiles
