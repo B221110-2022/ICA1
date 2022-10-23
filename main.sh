@@ -56,24 +56,31 @@
 
 
 ##################### Code block 3 : Alignment ###################################
-#cp -r /localdisk/data/BPSM/ICA1/Tcongo_genome/ .
+#cp -r /localdisk/data/BPSM/ICA1/Tcongo_genome/ .  # copy the whole genome of Trypanosoma congolense
+## build the index for the genome, output the index files with a prefix of "tc"
 #bowtie2-build Tcongo_genome/TriTrypDB-46_TcongolenseIL3000_2019_Genome.fasta.gz  Tcongo_genome/tc
 #mkdir Align_bam
+## get all the end1 and end2 seq file respectively
 #ls fastq | grep 1.fq.gz > fq1.tmp
 #ls fastq | grep 2.fq.gz > fq2.tmp
+## paste them so that bowtie2 can recursively align each paired-end data with whole genome.
 #paste fq1.tmp fq2.tmp | while read fq1 fq2;do
-#bowtie2 -p 50 -x Tcongo_genome/tc -1 fastq/${fq1} -2 fastq/${fq2} | samtools view -bS | samtools sort > Align_bam/${fq1:0:8}.bam
+#  # Using 50 threads. the result sam files are then transformed to bam files with -b,(-S:improve compatibility). Bam files are sorted so as to improve the speed for following steps.  
+#  bowtie2 -p 50 -x Tcongo_genome/tc -1 fastq/${fq1} -2 fastq/${fq2} | samtools view -bS | samtools sort > Align_bam/${fq1:0:8}.bam
+#  # output files are stored with the name of e.g. Tco-5053.bam
 #done
 #rm -f fq1.tmp fq2.tmp
 #
-########### Code block 4 : Counts data ########
-#cp /localdisk/data/BPSM/ICA1/TriTrypDB-46_TcongolenseIL3000_2019.bed .
+###################### Code block 4 : Counts data ###################################
+#cp /localdisk/data/BPSM/ICA1/TriTrypDB-46_TcongolenseIL3000_2019.bed . # get the gene information file
 #mkdir counts
 #ls Align_bam | while read bamfile;do
-#bedtools coverage -a TriTrypDB-46_TcongolenseIL3000_2019.bed -b Align_bam/${bamfile} > counts/${bamfile:0:8}cov.out
+#  # for each seq file, generate how many overlaps do each gene in bed file have. This will append colunms containing alignment information to the original bed file as output files
+#  bedtools coverage -a TriTrypDB-46_TcongolenseIL3000_2019.bed -b Align_bam/${bamfile} > counts/${bamfile:0:8}cov.out
+#  # output files are stored with the name of e.g. Tco-5053cov.out
 #done
-#
-#
+
+
 ########### Code block 5 : Mean for groups ########
 #mkdir groups
 #rm -f groups/*.tmp
