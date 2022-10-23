@@ -1,5 +1,9 @@
 #!/usr/bin/bash
 
+if [ ! -d "user_custom" ];then
+mkdir user_custom
+fi
+
 ####################### User personalisation ###########################
 rm -f *.tmp
 ls groups | awk 'BEGIN{FS="_";OFS="_";num=0}{num=num+1; print num " " $1,$2,$3}' > all_sample.tmp
