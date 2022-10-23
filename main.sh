@@ -63,7 +63,7 @@ rm -f summary_per_item.tmp summary_per_file.tmp
 ##################################################################################
 cp -r /localdisk/data/BPSM/ICA1/Tcongo_genome/ .  # copy the whole genome of Trypanosoma congolense
 # build the index for the genome, output the index files with a prefix of "tc"
-bowtie2-build Tcongo_genome/TriTrypDB-46_TcongolenseIL3000_2019_Genome.fasta.gz  Tcongo_genome/tc
+bowtie2-build Tcongo_genome/TriTrypDB-46_TcongolenseIL3000_2019_Genome.fasta.gz  Tcongo_genome/tc -- threads ${Threads}
 mkdir Align_bam
 # get all the end1 and end2 seq file respectively
 ls fastq | grep 1.fq.gz > fq1.tmp
