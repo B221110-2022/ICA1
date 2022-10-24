@@ -1,9 +1,8 @@
 #!/usr/bin/bash
 
-# if the folder not exists, create a new folder.
-if [ ! -d "user_custom" ];then
-mkdir user_custom
-fi
+# -p: if the folder exists, create without error messages.
+dirname="Fold_change/user_custom"
+mkdir -p ${dirname}
 
 ####################### User personalisation ###########################
 rm -f *.tmp
@@ -61,25 +60,25 @@ Filename="${Filename}.txt" # final file name generated, according to user's sele
 
 heading="Position\tGene\t${Ref}" # initialise the heading, the reference group is at the 3rd column.
 # initialise the final output file. get the mean count file of reference group, and set the counts as 1.
-tail -n +2  groups/${Ref}_mean.txt | cut -f1,2,3 | awk 'BEGIN{FS="\t";OFS="\t"}{$3=1;print $0}' > user_custom/${Filename}
-tail -n +2  groups/${Ref}_mean.txt | cut -f4 > user_custom/description.tmp # get the description column
-tail -n +2  groups/${Ref}_mean.txt | cut -f3 > user_custom/ref.tmp # get the original mean count of the reference group.
+tail -n +2  groups/${Ref}_mean.txt | cut -f1,2,3 | awk 'BEGIN{FS="\t";OFS="\t"}{$3=1;print $0}' > ${dirname}/${Filename}
+tail -n +2  groups/${Ref}_mean.txt | cut -f4 > ${dirname}/description.tmp # get the description column
+tail -n +2  groups/${Ref}_mean.txt | cut -f3 > ${dirname}/ref.tmp # get the original mean count of the reference group.
 
 # read all the chosen groups in loop, 
 for group in ${Com[@]};do  # e.g.: WT_0h_Uninduced
   # get the mean count of that group to a temp file.
-  tail -n +2  groups/${group}_mean.txt | cut -f3 > user_custom/${group}.tmp
+  tail -n +2  groups/${group}_mean.txt | cut -f3 > ${dirname}/${group}.tmp
   # paste to reference group mean count, and calculate fold change. 
-  paste user_custom/ref.tmp user_custom/${group}.tmp | awk 'BEGIN{FS="\t"}{if($1==0){$1=0.0001}{print $2/$1}}' > user_custom/${group}_f.tmp
+  paste ${dirname}/ref.tmp ${dirname}/${group}.tmp | awk 'BEGIN{FS="\t"}{if($1==0){$1=0.0001}{print $2/$1}}' > ${dirname}/${group}_f.tmp
   heading="${heading}\t${group}" # connect the group name to the heading.
   # add the calculated data to the final output file
-  paste user_custom/${Filename} user_custom/${group}_f.tmp > tmp && mv tmp user_custom/${Filename}
+  paste ${dirname}/${Filename} ${dirname}/${group}_f.tmp > tmp && mv tmp ${dirname}/${Filename}
 done
 # the sort index. the Sortby is taken from user input, it is the number of a comparision group. there are 3 columns ahead of it(2 gene info columns and a reference).
 sindex=$((${Sortby}+3))
 # paste the description column, and sort by the chosen column(a comparison group).
-paste user_custom/${Filename} user_custom/description.tmp | sort -k${sindex},${sindex}nr > tmp && mv tmp user_custom/${Filename}
-sed -i '1i '${heading}'\tDescription'  user_custom/${Filename}  # add a heading
-echo "Complete. The result was generated in /user_custom/${Filename}"
+paste ${dirname}/${Filename} ${dirname}/description.tmp | sort -k${sindex},${sindex}nr > tmp && mv tmp ${dirname}/${Filename}
+sed -i '1i '${heading}'\tDescription'  ${dirname}/${Filename}  # add a heading
+echo "Complete. The result was generated in ${dirname}/${Filename}"
 
-rm -f user_custom/*.tmp *.tmp
+rm -f ${dirname}/*.tmp *.tmp

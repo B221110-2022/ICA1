@@ -31,7 +31,7 @@ fi
 ##################################################################################
 ##################### Code block 2 : Quality check ###############################
 ##################################################################################
-mkdir report # fastqc does not create the folder automatically
+mkdir -p report # fastqc does not create the folder automatically
 fastqc fastq/*fq.gz -t ${Threads} -o report --extract  # perform fastqc and output to report folder, unzipping all the files.
 rm -f summary_per_item.tmp summary_per_file.tmp
 # get the quality summary for all the seqs once a time horizontally, read the items the fastqc has checked(e.g.Per base sequence content) in loop
@@ -64,7 +64,7 @@ rm -f summary_per_item.tmp summary_per_file.tmp
 cp -r /localdisk/data/BPSM/ICA1/Tcongo_genome/ .  # copy the whole genome of Trypanosoma congolense
 # build the index for the genome, output the index files with a prefix of "tc"
 bowtie2-build Tcongo_genome/TriTrypDB-46_TcongolenseIL3000_2019_Genome.fasta.gz  Tcongo_genome/tc -- threads ${Threads}
-mkdir Align_bam
+mkdir -p Align_bam
 # get all the end1 and end2 seq file respectively
 ls fastq | grep 1.fq.gz > fq1.tmp
 ls fastq | grep 2.fq.gz > fq2.tmp
@@ -80,7 +80,7 @@ rm -f fq1.tmp fq2.tmp
 ###################### Code block 4 : Counts data ################################
 ##################################################################################
 cp /localdisk/data/BPSM/ICA1/TriTrypDB-46_TcongolenseIL3000_2019.bed . # get the gene information file
-mkdir counts
+mkdir -p counts
 ls Align_bam | while read bamfile;do
   # for each seq file, generate how many overlaps do each gene in bed file have. This will append colunms containing alignment information to the original bed file as output files
   bedtools coverage -a TriTrypDB-46_TcongolenseIL3000_2019.bed -b Align_bam/${bamfile} > counts/${bamfile:0:8}cov.out
@@ -90,7 +90,7 @@ done
 ##################################################################################
 ###################### Code block 5 : Mean for groups ############################
 ##################################################################################
-mkdir groups
+mkdir -p groups
 rm -f groups/*.tmp
 ######## 5.1 some preparation: generate group files and get group info and others.
 # print the group info file excluding the head line, and sort. k2:type,k4:time,k5:treatment,k3:replicate. Sorted file will be at the order of groups with replicate from 1 to n
@@ -135,61 +135,64 @@ rm -f groups/*file.tmp
 ###################### Code block 6 : Fold change comparisons ####################
 ##################################################################################
 ######### 6.1 Specific time points. WT Uninduced group is set as reference
-mkdir fixed_time
+dirname="Fold_change/fixed_time"
+mkdir -p ${dirname}
 # This is to get all the time point the experiments have done, from the info file Tco.fqfiles
 tail -n +2 fastq/Tco.fqfiles | cut -f4 | sort | uniq | while read time;do  # $time=0,24,48...
   ref="WT_${time}h_Uninduced_mean.tmp" # indentify the reference group, whose data will be nomorlised to 1.
   # for each time point, generate a file that indicates the order of the groups. This is the column order shown in final output file. e.g. for 0h groups: WT_0h_Uninduced(ref),Clone1_0h_Uninduced,Clone1_0h_Induced,Clone2_0h_Uninduced,Clone2_0h_Induced,
-  ls groups | grep WT_${time}h_.*.tmp | sort -t"_" -k3,3r > fixed_time/order.tmp
-  ls groups | grep Clone.*_${time}h_.*.tmp | sort -t"_" -k1,1 -k3,3r >> fixed_time/order.tmp
+  ls groups | grep WT_${time}h_.*.tmp | sort -t"_" -k3,3r > ${dirname}/order.tmp
+  ls groups | grep Clone.*_${time}h_.*.tmp | sort -t"_" -k1,1 -k3,3r >> ${dirname}/order.tmp
   # initialise the final output file, first paste gene info columns into it. 
-  paste gene.tmp > fixed_time/${time}h.txt
+  paste gene.tmp > ${dirname}/${time}h.txt
   heading="Position\tGene"  # to initialise the heading line, setting a variable.
   # read the mean count files from a specific group in order from order.tmp file, in loop
   while read file;do  # e.g.: WT_0h_Uninduced_mean.tmp
     # the column 1 of the pasted text is always the mean data of reference group. if the file in loop is exactly the reference, then all the data greater than 0 will be transformed to 1. if the count is 0 in reference group, then it will be converted to a sufficient small number(0.0001) to allow the calculation of fold change.
-    paste groups/${ref} groups/${file} | awk 'BEGIN{FS="\t"}{if($1==0){$1=0.0001}{print $2/$1}}' > fixed_time/${file%mean*}f.tmp # outputfile e.g. Clone1_0h_Uninduced_f.tmp
+    paste groups/${ref} groups/${file} | awk 'BEGIN{FS="\t"}{if($1==0){$1=0.0001}{print $2/$1}}' > ${dirname}/${file%mean*}f.tmp # outputfile e.g. Clone1_0h_Uninduced_f.tmp
     # append the fold change data column to the final file.
-    paste fixed_time/${time}h.txt fixed_time/${file%mean*}f.tmp > tmp && mv tmp fixed_time/${time}h.txt
+    paste ${dirname}/${time}h.txt ${dirname}/${file%mean*}f.tmp > tmp && mv tmp ${dirname}/${time}h.txt
     heading="${heading}\t${file%_mean*}" # append the group name to heading variable.
-  done < fixed_time/order.tmp
+  done < ${dirname}/order.tmp
   # add the description to the final file, and sort in descending order of the 4th column(in this case is Clone1_0h_Uninduced)
-  paste fixed_time/${time}h.txt description.tmp | sort -k4,4nr > tmp && mv tmp fixed_time/${time}h.txt
-  sed -i '1i '${heading}'\tDescription'  fixed_time/${time}h.txt # add a heading line
+  paste ${dirname}/${time}h.txt description.tmp | sort -k4,4nr > tmp && mv tmp ${dirname}/${time}h.txt
+  sed -i '1i '${heading}'\tDescription'  ${dirname}/${time}h.txt # add a heading line
 done  # time loop
 
 
 ######### 6.2 Specific types. ref group: 0h_Uninduced
 # The total process is exactly the same as 6.1, but here the type is in loop.
-mkdir fixed_type
+dirname="Fold_change/fixed_type"
+mkdir -p ${dirname}
 tail -n +2 fastq/Tco.fqfiles | cut -f2 | sort | uniq | while read types;do  # WT, Clone1,Clone2,Clonen
   ref="${types}_0h_Uninduced_mean.tmp"
-  ls groups | grep ${types}.*.tmp | sort -t"_" -k2,2 -k3,3r > fixed_type/order.tmp
-  paste gene.tmp > fixed_type/${types}.txt
+  ls groups | grep ${types}.*.tmp | sort -t"_" -k2,2 -k3,3r > ${dirname}/order.tmp
+  paste gene.tmp > ${dirname}/${types}.txt
   heading="Position\tGene"
   while read file;do
-    paste groups/${ref} groups/${file} | awk 'BEGIN{FS="\t"}{if($1==0){$1=0.0001}{print $2/$1}}' > fixed_type/${file%mean*}f.tmp
-    paste fixed_type/${types}.txt fixed_type/${file%mean*}f.tmp > tmp && mv tmp fixed_type/${types}.txt
+    paste groups/${ref} groups/${file} | awk 'BEGIN{FS="\t"}{if($1==0){$1=0.0001}{print $2/$1}}' > ${dirname}/${file%mean*}f.tmp
+    paste ${dirname}/${types}.txt ${dirname}/${file%mean*}f.tmp > tmp && mv tmp ${dirname}/${types}.txt
     heading="${heading}\t${file%_mean*}"
-  done < fixed_type/order.tmp
-  paste fixed_type/${types}.txt description.tmp | sort -k4,4nr > tmp && mv tmp fixed_type/${types}.txt
-  sed -i '1i '${heading}'\tDescription'  fixed_type/${types}.txt
+  done < ${dirname}/order.tmp
+  paste ${dirname}/${types}.txt description.tmp | sort -k4,4nr > tmp && mv tmp ${dirname}/${types}.txt
+  sed -i '1i '${heading}'\tDescription'  ${dirname}/${types}.txt
 done # type loop
 
 ########## 6.3 Uninduced. ref group: WT_0h
 # The whole process is same as above, but here does not include a big loop to search the multiple fixed groups like time points or types ("Uninduced" is specified).
-mkdir Uninduced
+dirname="Fold_change/Uninduced"
+mkdir -p ${dirname}
 ref="WT_0h_Uninduced_mean.tmp"
-ls groups | grep WT.*Uninduced.*.tmp > Uninduced/order.tmp
-ls groups | grep Clone.*Uninduced.*.tmp >> Uninduced/order.tmp
-paste gene.tmp > Uninduced/Uninduced.txt
+ls groups | grep WT.*Uninduced.*.tmp > ${dirname}/order.tmp
+ls groups | grep Clone.*Uninduced.*.tmp >> ${dirname}/order.tmp
+paste gene.tmp > ${dirname}/Uninduced.txt
 heading="Position\tGene"
 while read file;do
-  paste groups/${ref} groups/${file} | awk 'BEGIN{FS="\t"}{if($1==0){$1=0.0001}{print $2/$1}}' > Uninduced/${file%mean*}f.tmp
-  paste Uninduced/Uninduced.txt Uninduced/${file%mean*}f.tmp > tmp && mv tmp Uninduced/Uninduced.txt
+  paste groups/${ref} groups/${file} | awk 'BEGIN{FS="\t"}{if($1==0){$1=0.0001}{print $2/$1}}' > ${dirname}/${file%mean*}f.tmp
+  paste ${dirname}/Uninduced.txt ${dirname}/${file%mean*}f.tmp > tmp && mv tmp ${dirname}/Uninduced.txt
   heading="${heading}\t${file%_mean*}"
-done < Uninduced/order.tmp
-paste Uninduced/Uninduced.txt description.tmp | sort -k4,4nr > tmp && mv tmp Uninduced/Uninduced.txt
-sed -i '1i '${heading}'\tDescription'  Uninduced/Uninduced.txt
+done < ${dirname}/order.tmp
+paste ${dirname}/Uninduced.txt description.tmp | sort -k4,4nr > tmp && mv tmp ${dirname}/Uninduced.txt
+sed -i '1i '${heading}'\tDescription'  ${dirname}/Uninduced.txt
 
-rm -f *.tmp groups/*.tmp fixed_time/*.tmp  fixed_type/*.tmp  Uninduced/*.tmp 
+rm -f *.tmp groups/*.tmp Fold_change/fixed_time/*.tmp  Fold_change/fixed_type/*.tmp  Fold_change/Uninduced/*.tmp 
