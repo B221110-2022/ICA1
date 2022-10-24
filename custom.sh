@@ -28,10 +28,10 @@ while true; do # ask user to choose comparison groups, same as above.
     # store the chosen group to a file.
     sed -n ${answer}p all_sample.tmp >> choice.tmp
   else if [[ ${answer} =~ [Qq] ]];then
-  break
-  else
-    echo "Please type a valid number."
-  fi
+      break
+    else
+      echo "Please type a valid number."
+    fi
   fi
 done
 chosen_num=$(cat choice.tmp | wc -l)  # the number of chosen comparison groups
