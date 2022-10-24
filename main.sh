@@ -147,14 +147,14 @@ tail -n +2 fastq/Tco.fqfiles | cut -f4 | sort | uniq | while read time;do  # $ti
   heading="Position\tGene"  # to initialise the heading line, setting a variable.
   # read the mean count files from a specific group in order from order.tmp file, in loop
   while read file;do  # e.g.: WT_0h_Uninduced_mean.tmp
-    # the column 1 of the pasted text is always the mean data of reference group. if the file in loop is exactly the reference, then all the data will be transformed to 1, otherwise the fold change will be calculated. for those 0 in reference, the corresponding fold change will be Inf(infinite) 
-    paste groups/${ref} groups/${file} | awk 'BEGIN{FS="\t"}{if($1>0){print $2/$1}else{if("'${file}'"=="'${ref}'"){print 1}else{print "Inf"}}}' > fixed_time/${file%mean*}f.tmp # outputfile e.g. Clone1_0h_Uninduced_f.tmp
+    # the column 1 of the pasted text is always the mean data of reference group. if the file in loop is exactly the reference, then all the data greater than 0 will be transformed to 1. if the count is 0 in reference group, then it will be converted to a sufficient small number(0.0001) to allow the calculation of fold change.
+    paste groups/${ref} groups/${file} | awk 'BEGIN{FS="\t"}{if($1==0){$1=0.0001}{print $2/$1}}' > fixed_time/${file%mean*}f.tmp # outputfile e.g. Clone1_0h_Uninduced_f.tmp
     # append the fold change data column to the final file.
     paste fixed_time/${time}h.txt fixed_time/${file%mean*}f.tmp > tmp && mv tmp fixed_time/${time}h.txt
     heading="${heading}\t${file%_mean*}" # append the group name to heading variable.
   done < fixed_time/order.tmp
   # add the description to the final file, and sort in descending order of the 4th column(in this case is Clone1_0h_Uninduced)
-  paste fixed_time/${time}h.txt description.tmp | sort -k4,4r > tmp && mv tmp fixed_time/${time}h.txt
+  paste fixed_time/${time}h.txt description.tmp | sort -k4,4nr > tmp && mv tmp fixed_time/${time}h.txt
   sed -i '1i '${heading}'\tDescription'  fixed_time/${time}h.txt # add a heading line
 done  # time loop
 
@@ -168,11 +168,11 @@ tail -n +2 fastq/Tco.fqfiles | cut -f2 | sort | uniq | while read types;do  # WT
   paste gene.tmp > fixed_type/${types}.txt
   heading="Position\tGene"
   while read file;do
-    paste groups/${ref} groups/${file} | awk 'BEGIN{FS="\t"}{if($1>0){print $2/$1}else{if("'${file}'"=="'${ref}'"){print 1}else{print "Inf"}}}' > fixed_type/${file%mean*}f.tmp
+    paste groups/${ref} groups/${file} | awk 'BEGIN{FS="\t"}{if($1==0){$1=0.0001}{print $2/$1}}' > fixed_type/${file%mean*}f.tmp
     paste fixed_type/${types}.txt fixed_type/${file%mean*}f.tmp > tmp && mv tmp fixed_type/${types}.txt
     heading="${heading}\t${file%_mean*}"
   done < fixed_type/order.tmp
-  paste fixed_type/${types}.txt description.tmp | sort -k4,4r > tmp && mv tmp fixed_type/${types}.txt
+  paste fixed_type/${types}.txt description.tmp | sort -k4,4nr > tmp && mv tmp fixed_type/${types}.txt
   sed -i '1i '${heading}'\tDescription'  fixed_type/${types}.txt
 done # type loop
 
@@ -185,11 +185,11 @@ ls groups | grep Clone.*Uninduced.*.tmp >> Uninduced/order.tmp
 paste gene.tmp > Uninduced/Uninduced.txt
 heading="Position\tGene"
 while read file;do
-  paste groups/${ref} groups/${file} | awk 'BEGIN{FS="\t"}{if($1>0){print $2/$1}else{if("'${file}'"=="'${ref}'"){print 1}else{print "Inf"}}}' > Uninduced/${file%mean*}f.tmp
+  paste groups/${ref} groups/${file} | awk 'BEGIN{FS="\t"}{if($1==0){$1=0.0001}{print $2/$1}}' > Uninduced/${file%mean*}f.tmp
   paste Uninduced/Uninduced.txt Uninduced/${file%mean*}f.tmp > tmp && mv tmp Uninduced/Uninduced.txt
   heading="${heading}\t${file%_mean*}"
 done < Uninduced/order.tmp
-paste Uninduced/Uninduced.txt description.tmp | sort -k4,4r > tmp && mv tmp Uninduced/Uninduced.txt
+paste Uninduced/Uninduced.txt description.tmp | sort -k4,4nr > tmp && mv tmp Uninduced/Uninduced.txt
 sed -i '1i '${heading}'\tDescription'  Uninduced/Uninduced.txt
 
 rm -f *.tmp groups/*.tmp fixed_time/*.tmp  fixed_type/*.tmp  Uninduced/*.tmp 
